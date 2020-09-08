@@ -70,9 +70,37 @@ class Author:
         return self.workid
 
 
+class Composition:
+    def __init__(self, Nickname_Authors_Name, Authors_List_of_Works, Authors_Work_id, Name_Composition):
+        self.Nickname_Authors_Name = Nickname_Authors_Name   # имя автора
+        self.Authors_List_of_Works = Authors_List_of_Works   # список произведений автора
+        self.Authors_Work_id = Authors_Work_id          # словарь из ключа - название произведения и значения его id
+        self.Name_Composition = Name_Composition             # Название произведения
+        self.link_comp = 'https://ficbook.net{}#part_content'
+
+    def generating_links_to_works(self):
+        '''
+        Генерация ссылки на произведение, если название произведения (Name_Composition), присутствует в
+        списке Authors_List_of_Works произведений, то обращаемся к словарю Authors_Work_id для вытягивания
+        /readfic/8205186 и формируем ссылку на произведение
+        '''
+        if self.Name_Composition in self.Authors_List_of_Works:
+            self.link_comp = self.link_comp.format(self.Authors_Work_id[self.Name_Composition])
+            return self.link_comp
+        else:
+            pass
+
+
+
 aut = Author(1149804)
-print(aut.author_page)
-print((aut.GET_Authors_page))
-print((aut.Authors_Name()))
-print(aut.List_of_Works())
-print(aut.Work_id())
+Nickname_Authors_Name = aut.Authors_Name()
+Authors_List_of_Works = aut.List_of_Works()
+Authors_Work_id = aut.Work_id()
+
+print(Nickname_Authors_Name)
+print(Authors_List_of_Works)
+print(Authors_Work_id)
+Name_Composition = str(input('Введиите название произведения: '))
+
+comp_on = Composition(Nickname_Authors_Name, Authors_List_of_Works, Authors_Work_id, Name_Composition)
+print(comp_on.generating_links_to_works())
