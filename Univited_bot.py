@@ -1,8 +1,11 @@
 import requests
 from lxml import html
+from time import sleep
 from lxml import etree as et
 import re
 from requests.exceptions import HTTPError
+from token_api_telegram import return_token
+
 
 class Author:
 
@@ -70,6 +73,7 @@ class Author:
         return self.workid
 
 
+
 class Composition:
     def __init__(self, Nickname_Authors_Name, Authors_List_of_Works, Authors_Work_id, Name_Composition):
         self.Nickname_Authors_Name = Nickname_Authors_Name   # имя автора
@@ -109,7 +113,7 @@ class Composition:
         # страницы и кол-во частей
         size = str(self.els_mb5[0].text_content())
         size = re.sub("\s\s+", " ", size)
-        self.pages , self.parts = re.findall("\d+", size)
+        pages , self.parts = re.findall("\d+", size)
         # Метки
         self.tags = str(self.els_mb5[1].text_content())
         self.tags = re.sub("\s\s+", " ", self.tags)
@@ -123,22 +127,106 @@ class Composition:
         return self.pages + ' страниц' + '\n' + self.parts + ' частей' + '\n' + self.tags + '\n' + \
                self.description + '\n' + self.notes
 
+
+class BotHandler:
+
+    def __init__(self, token):
+        self.token = token
+        self.api_url = "https://api.telegram.org/bot{}/".format(token)
+
+    def get_updates_json(self, offset=None, timeout=30):
+        # https://api.telegram.org/bot1288091950:AAGtzfTqchhqiIWbu8jxOUJBWBDaqJ-5Q4I/getUpdates
+        # Получить самое последнее обновление
+        params = {'timeout': timeout, 'offset': offset}
+        resp = requests.get(self.api_url + 'getUpdates', data=params)
+        result_json = resp.json()['result']
+        return result_json
+
+    def get_last_update(self):
+        get_result = self.get_updates_json()
+        #print('len(get_result)' кол-во обновлений в getUpdates)
+        if len(get_result) > 0:
+            last_update = get_result[-1]
+        else:
+            last_update = get_result[len(get_result)]
+
+        return last_update
+
+    def send_message(self, chat_id, text):
+        params = {'chat_id': chat_id, 'text': text}
+        resp = requests.post(self.api_url + 'sendMessage', data=params)
+        return resp
+
+
+token = return_token()
+bot = BotHandler(token)
+#pages, parts, tags, description, notes = '', '', '', '', ''
+
 def main():
-    pass
+    update_id = bot.get_last_update()['update_id'] # самый  последний update_id
+
+    while True:
+        new_offset = None
+        bot.get_updates_json(new_offset)
+        last_update_id = bot.get_last_update()['update_id']        # #update_id = last_update(get_updates_json(url))['update_id']
+        last_chat_text = bot.get_last_update()['message']['text']
+        last_chat_id = bot.get_last_update()['message']['chat']['id']
+        last_chat_name = bot.get_last_update()['message']['chat']['first_name']
+
+        last_chat_text_author_id = last_chat_text.split('/')            # 1) Команда 2) id автора 2) Название произведение
+        print(last_update_id, last_chat_text, last_chat_id, last_chat_name, last_chat_text_author_id)
+        if update_id == last_update_id:
+            update_id = bot.get_last_update()['update_id']
+            sleep(10)
+        else:
+            aut = Author(int(last_chat_text_author_id[2]))
+
+            if last_chat_text_author_id[1] == 'Composition':
+                Nickname_Authors_Name = aut.Authors_Name()
+                Authors_Work_id = aut.Work_id()
+                bot.send_message(last_chat_id, Nickname_Authors_Name + '\n'  + str(Authors_Work_id))
+
+            if last_chat_text_author_id[1] == 'inf':
+                comp_on = Composition(aut.Authors_Name(), aut.List_of_Works(), aut.Work_id(), last_chat_text_author_id[3])
+                bot.send_message(last_chat_id, comp_on.generating_information_about_a_work())
+
+            update_id = bot.get_last_update()['update_id']
+            sleep(10)
 
 if __name__ == '__main__':
     main()
 
-aut = Author(1149804)
-Nickname_Authors_Name = aut.Authors_Name()
-Authors_List_of_Works = aut.List_of_Works()
-Authors_Work_id = aut.Work_id()
 
-print(Nickname_Authors_Name)
-print(Authors_List_of_Works)
-print(Authors_Work_id)
+        #
+        # last_chat_id сохраним его в отдельную переменную, и по этим значениям можем слать сообщения
+
+        #print(type(last_update_id), type(bot.get_last_update()['update_id']))
+        #print(last_update_id == bot.get_last_update()['update_id']-1)
+
+        #print('count_requests_last', count_requests_last, 'count_requests', count_requests)
+
+        #if not(last_update_id == bot.get_last_update()['update_id']):     #or count_requests-1 ==  count_requests_last
+            #
+
+    ''''
+        count_requests_last = count_requests
+        count_requests+=1
+        print('count_requests_last', count_requests_last, 'count_requests', count_requests)
+        aut = Author(last_chat_text_author_id[1])
+        comp_on = Composition(aut.Authors_Name(), aut.List_of_Works(), aut.Work_id(), last_chat_text_author_id[2])
+        bot.send_message(last_chat_id, comp_on.generating_information_about_a_work())
+    '''
+
+
+
+
+'''
+
+
+
 Name_Composition = str(input('Введиите название произведения: '))
 
 comp_on = Composition(Nickname_Authors_Name, Authors_List_of_Works, Authors_Work_id, Name_Composition)
 print(comp_on.generating_links_to_works())
 print(comp_on.generating_information_about_a_work())
+'''
