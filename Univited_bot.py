@@ -1,11 +1,10 @@
 import requests
 from lxml import html
-from time import sleep
 from lxml import etree as et
 import re
 from requests.exceptions import HTTPError
 from token_api_telegram import return_token
-
+from collections import defaultdict
 
 class Author:
 
@@ -15,12 +14,8 @@ class Author:
         self.workid = {}                 # словарь из ключа - название произведения и значения его id
         self.authors_id = authors_id     # id автора
         self.profile_tabs = 'https://ficbook.net/authors/{}/profile/works#profile-tabs'    # профиль автора
-        #self.basic_url = 'https://ficbook.net{}'
         self.author_page =  self.profile_tabs.format(authors_id)                           # ссылка на страницу автора
-        #self.response_author_page = ''
-        #self.parsed_author_page = ''
-        self.class_name_author = 'author'              # класс парсинга имени автора
-        #self.authors_name = ''
+        self.class_name_author = 'author'             # класс парсинга имени автора
         self.class_List_of_Works = 'visit-link'        # класс персинга произведений автора
 
 
@@ -67,9 +62,7 @@ class Author:
         work_ID = re.findall("/readfic/+\d+", workid_author_page)
 
         for i in range(len(work_ID)):
-            #print(self.List_of_Works()[i], work_ID[i])
             self.workid[self.List_of_Works()[i]] = work_ID[i]
-
         return self.workid
 
 
@@ -81,15 +74,7 @@ class Composition:
         self.Authors_Work_id = Authors_Work_id          # словарь из ключа - название произведения и значения его id
         self.Name_Composition = Name_Composition             # Название произведения
         self.link_comp = 'https://ficbook.net{}#part_content'
-        self.parsed_body = ''
         self.class_name = 'mb-5'
-        self.els_mb5 = ''
-        # Информация о произведении, кроме названия:
-        self.pages = ''
-        self.parts = ''
-        self.tags = ''
-        self.description = ''
-        self.notes = ''
 
     def generating_links_to_works(self):
         '''
@@ -104,29 +89,47 @@ class Composition:
             return "Произведение не найденно, невозможно создать link, пожалуйста введите правильное название произведения"
 
     def generating_information_about_a_work(self):
+        '''
+        Генерация информации о произведении, /inf/Id атора/Произведение
+        '''
         self.link_comp = self.generating_links_to_works()
         response = requests.get(self.link_comp)
         # Преобразование тела документа в дерево элементов (DOM)
-        self.parsed_body = html.fromstring(response.text)
-        self.els_mb5 = self.parsed_body.find_class(self.class_name)
+        parsed_body = html.fromstring(response.text)
+        els_mb5 = parsed_body.find_class(self.class_name)
+        len_els_mb5 = len(els_mb5)
+        information_work = [re.sub("\s\s+", " ", str(els_mb5[t].text_content())) for t in range(len_els_mb5)]
         # Информация о произведении, кроме названия:
-        # страницы и кол-во частей
-        size = str(self.els_mb5[0].text_content())
-        size = re.sub("\s\s+", " ", size)
-        pages , self.parts = re.findall("\d+", size)
-        # Метки
-        self.tags = str(self.els_mb5[1].text_content())
-        self.tags = re.sub("\s\s+", " ", self.tags)
-        # Описание
-        self.description = str(self.els_mb5[2].text_content())
-        self.description = re.sub("\s\s+", " ", self.description)
-        # Примечания автора
-        self.notes = str(self.els_mb5[3].text_content())
-        self.notes = re.sub("\s\s+", " ", self.notes)
+        for inf_w in information_work:
+            # Cтраницы и кол-во частей
+            if re.findall("Размер.+", inf_w):
+                size = re.findall("\d+", inf_w)   # ['417', '18']
+            # Метки
+            if re.findall("Метки.+", inf_w):
+                tags = inf_w
+            # Описание
+            if re.findall("Описание.+", inf_w):
+                description = inf_w
+            # Примечания автора
+            if re.findall("Примечания автора.+", inf_w):
+                notes = inf_w
 
-        return self.pages + ' страниц' + '\n' + self.parts + ' частей' + '\n' + self.tags + '\n' + \
-               self.description + '\n' + self.notes
+        return size[0] + ' страниц' + '\n' + size[1] + ' частей' + '\n' + tags + '\n' + \
+               description + '\n' + notes
 
+
+    def generating_information_dict_numberOFchapters_published(self):
+        self.link_comp = self.generating_links_to_works()
+        response = requests.get(self.link_comp)
+        parsed_body = html.fromstring(response.text)
+        els_mb5 = parsed_body.find_class(self.class_name)
+        len_els_mb5 = len(els_mb5)
+        information_work = [re.sub("\s\s+", " ", str(els_mb5[t].text_content())) for t in range(len_els_mb5)]
+        for inf_w in information_work:
+            # Cтраницы и кол-во частей
+            if re.findall("Размер.+", inf_w):
+                parts = re.findall("\d+", inf_w)[1]   # ['417', '18']
+        return parts
 
 class BotHandler:
 
@@ -135,7 +138,6 @@ class BotHandler:
         self.api_url = "https://api.telegram.org/bot{}/".format(token)
 
     def get_updates_json(self, offset=None, timeout=30):
-        # https://api.telegram.org/bot1288091950:AAGtzfTqchhqiIWbu8jxOUJBWBDaqJ-5Q4I/getUpdates
         # Получить самое последнее обновление
         params = {'timeout': timeout, 'offset': offset}
         resp = requests.get(self.api_url + 'getUpdates', data=params)
@@ -144,7 +146,6 @@ class BotHandler:
 
     def get_last_update(self):
         get_result = self.get_updates_json()
-        #print('len(get_result)' кол-во обновлений в getUpdates)
         if len(get_result) > 0:
             last_update = get_result[-1]
         else:
@@ -160,73 +161,9 @@ class BotHandler:
 
 token = return_token()
 bot = BotHandler(token)
-#pages, parts, tags, description, notes = '', '', '', '', ''
 
-def main():
-    update_id = bot.get_last_update()['update_id'] # самый  последний update_id
+list_tracking_point = {}
+dictionary_numberOFchapters_published = {}
+#dictionary_chat_id_and_tracking_point = {}
+dictionary_chat_id_and_tracking_point = defaultdict(list)
 
-    while True:
-        new_offset = None
-        bot.get_updates_json(new_offset)
-        last_update_id = bot.get_last_update()['update_id']        # #update_id = last_update(get_updates_json(url))['update_id']
-        last_chat_text = bot.get_last_update()['message']['text']
-        last_chat_id = bot.get_last_update()['message']['chat']['id']
-        last_chat_name = bot.get_last_update()['message']['chat']['first_name']
-
-        last_chat_text_author_id = last_chat_text.split('/')            # 1) Команда 2) id автора 2) Название произведение
-        print(last_update_id, last_chat_text, last_chat_id, last_chat_name, last_chat_text_author_id)
-        if update_id == last_update_id:
-            update_id = bot.get_last_update()['update_id']
-            sleep(10)
-        else:
-            aut = Author(int(last_chat_text_author_id[2]))
-
-            if last_chat_text_author_id[1] == 'Composition':
-                Nickname_Authors_Name = aut.Authors_Name()
-                Authors_Work_id = aut.Work_id()
-                bot.send_message(last_chat_id, Nickname_Authors_Name + '\n'  + str(Authors_Work_id))
-
-            if last_chat_text_author_id[1] == 'inf':
-                comp_on = Composition(aut.Authors_Name(), aut.List_of_Works(), aut.Work_id(), last_chat_text_author_id[3])
-                bot.send_message(last_chat_id, comp_on.generating_information_about_a_work())
-
-            update_id = bot.get_last_update()['update_id']
-            sleep(10)
-
-if __name__ == '__main__':
-    main()
-
-
-        #
-        # last_chat_id сохраним его в отдельную переменную, и по этим значениям можем слать сообщения
-
-        #print(type(last_update_id), type(bot.get_last_update()['update_id']))
-        #print(last_update_id == bot.get_last_update()['update_id']-1)
-
-        #print('count_requests_last', count_requests_last, 'count_requests', count_requests)
-
-        #if not(last_update_id == bot.get_last_update()['update_id']):     #or count_requests-1 ==  count_requests_last
-            #
-
-    ''''
-        count_requests_last = count_requests
-        count_requests+=1
-        print('count_requests_last', count_requests_last, 'count_requests', count_requests)
-        aut = Author(last_chat_text_author_id[1])
-        comp_on = Composition(aut.Authors_Name(), aut.List_of_Works(), aut.Work_id(), last_chat_text_author_id[2])
-        bot.send_message(last_chat_id, comp_on.generating_information_about_a_work())
-    '''
-
-
-
-
-'''
-
-
-
-Name_Composition = str(input('Введиите название произведения: '))
-
-comp_on = Composition(Nickname_Authors_Name, Authors_List_of_Works, Authors_Work_id, Name_Composition)
-print(comp_on.generating_links_to_works())
-print(comp_on.generating_information_about_a_work())
-'''
