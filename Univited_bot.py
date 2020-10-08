@@ -164,6 +164,5 @@ bot = BotHandler(token)
 
 list_tracking_point = {}
 dictionary_numberOFchapters_published = {}
-#dictionary_chat_id_and_tracking_point = {}
 dictionary_chat_id_and_tracking_point = defaultdict(list)
 

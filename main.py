@@ -1,7 +1,6 @@
 import Univited_bot
 from time import sleep
 import time
-from collections import defaultdict
 
 def main():
     update_id = Univited_bot.bot.get_last_update()['update_id'] # самый  последний update_id
@@ -53,6 +52,7 @@ def main():
             if last_chat_text_author_id[1] == 'trac':
                 # формируем объект проиизведение:
                 composition = Univited_bot.Composition(aut.Authors_Name(), aut.List_of_Works(), aut.Work_id(), last_chat_text_author_id[3])
+                # Если мы еще не ослеживаем это произведение
                 # Если ссылки на это произведение нет в словере отслеживаемых list_tracking_point произведений
                 if composition.generating_links_to_works() not in Univited_bot.list_tracking_point:
                     # добавлеем в словарь -> list_tracking_point (ссылку на произведение: произведение)
@@ -72,20 +72,38 @@ def main():
                     # отслеживает это произведение
                     if last_chat_id not in Univited_bot.dictionary_chat_id_and_tracking_point[composition.generating_links_to_works()]:
                         Univited_bot.dictionary_chat_id_and_tracking_point[composition.generating_links_to_works()].append(last_chat_id)
-                        print('dictionary_chat_id_and_tracking_point', Univited_bot.dictionary_chat_id_and_tracking_point)
+                        #print('dictionary_chat_id_and_tracking_point', Univited_bot.dictionary_chat_id_and_tracking_point)
+
+            if last_chat_text_author_id[1] == 'my_author':
+                # должны показать авторов/произведения которые отслеживает человек
+                pass
+
 
         if time.time() - starttime  > 20:
             starttime = time.time()
-
+            # Проходим по всем отслеживаемым произведениям:
             for link_composition in Univited_bot.list_tracking_point:
+                # ссылка на произведение
                 print(link_composition)
-                print(Univited_bot.dictionary_numberOFchapters_published[Univited_bot.list_tracking_point[link_composition]])
-                print(Univited_bot.list_tracking_point[link_composition].generating_information_dict_numberOFchapters_published())
+                # кол-во частей у произведения
+                #print('*--->', Univited_bot.dictionary_numberOFchapters_published[Univited_bot.list_tracking_point[link_composition]])
+                #print('*--->', Univited_bot.list_tracking_point[link_composition].generating_information_dict_numberOFchapters_published())
+                ''''
+                Генерируем колво частей у произведения, сравниваем его с кол-вом частей которое хранятся в словаре 
+                и если по generating_information_dict_numberOFchapters_published получилось больше изменяем
+                кол-во частей в словаре
+                '''
                 if Univited_bot.dictionary_numberOFchapters_published[Univited_bot.list_tracking_point[link_composition]] \
                     != Univited_bot.list_tracking_point[link_composition].generating_information_dict_numberOFchapters_published():
-                    print("В произведении {}, добавилась новая глава".format(link_composition))
-                    print(Univited_bot.dictionary_chat_id_and_tracking_point[Univited_bot.list_tracking_point[link_composition]])
-                    print(Univited_bot.dictionary_chat_id_and_tracking_point)
+
+                    # Проходим по всем chat id в которые нужно послать оповещение
+                    for chat_ID in Univited_bot.dictionary_chat_id_and_tracking_point[link_composition]:
+                        Univited_bot.bot.send_message(chat_ID, "В произведении {}, изменилось кол-во глав".format(link_composition))
+
+                    # изменяем кол-во частей в словаре
+                    Univited_bot.dictionary_numberOFchapters_published[Univited_bot.list_tracking_point[link_composition]] \
+                    = Univited_bot.list_tracking_point[link_composition].generating_information_dict_numberOFchapters_published()
+
 
 
 if __name__ == '__main__':
