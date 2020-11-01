@@ -1,33 +1,37 @@
 import Univited_bot
 from time import sleep
 import time
+import threading
+import random
+
 
 def main():
     update_id = Univited_bot.bot.get_last_update()['update_id'] # самый  последний update_id
     starttime = time.time()
-    # print(starttime)  # пример 1600616099.5809093
+
     while True:
-        new_offset = None
-        Univited_bot.bot.get_updates_json(new_offset)
-        last_update_id = Univited_bot.bot.get_last_update()['update_id']        # #update_id = last_update(get_updates_json(url))['update_id']
-        last_chat_text = Univited_bot.bot.get_last_update()['message']['text']
-        last_chat_id = Univited_bot.bot.get_last_update()['message']['chat']['id']
-        last_chat_name = Univited_bot.bot.get_last_update()['message']['chat']['first_name']
+        last_parameters = Univited_bot.bot.get_last_update()
+
+        last_update_id = last_parameters['update_id']
+        last_chat_text = last_parameters['message']['text']
+        last_chat_id = last_parameters['message']['chat']['id']
+        last_chat_name = last_parameters['message']['chat']['first_name']
 
         last_chat_text_author_id = last_chat_text.split('/')            # 1) Команда 2) id автора 2) Название произведение
         print(last_update_id, last_chat_text, last_chat_id, last_chat_name, last_chat_text_author_id)
+
         '''
-        Есди update_id полученный при первом запуске совпадает с последним last_update_id т.е если новых запосов 
-        не было, update_id присваивается последний Univited_bot.bot.get_last_update()['update_id']
-        и ждем некоторое время до новой проверки полученных сообщений
+        #Есди update_id полученный при первом запуске совпадает с последним last_update_id т.е если новых запосов
+        #не было, update_id присваивается последний Univited_bot.bot.get_last_update()['update_id']
+        #и ждем некоторое время до новой проверки полученных сообщений
         '''
         if update_id == last_update_id:
             update_id = Univited_bot.bot.get_last_update()['update_id']
             sleep(10)
         else:
             '''
-            Если это не так и разница между update_id и last_update_id есть, т.е если за это время были новые 
-            поступления данны/запросы в бот
+            #Если это не так и разница между update_id и last_update_id есть, т.е если за это время были новые
+            #поступления данны/запросы в бот
             '''
             aut = Univited_bot.Author(int(last_chat_text_author_id[2]))
 
@@ -47,7 +51,7 @@ def main():
             update_id = Univited_bot.bot.get_last_update()['update_id']
             sleep(10)
             '''
-            Формируем список произведений за которыми будет производиться слежка
+            #Формируем список произведений за которыми будет производиться слежка
             '''
             if last_chat_text_author_id[1] == 'trac':
                 # формируем объект проиизведение:
@@ -89,9 +93,9 @@ def main():
                 #print('*--->', Univited_bot.dictionary_numberOFchapters_published[Univited_bot.list_tracking_point[link_composition]])
                 #print('*--->', Univited_bot.list_tracking_point[link_composition].generating_information_dict_numberOFchapters_published())
                 ''''
-                Генерируем колво частей у произведения, сравниваем его с кол-вом частей которое хранятся в словаре 
-                и если по generating_information_dict_numberOFchapters_published получилось больше изменяем
-                кол-во частей в словаре
+                #Генерируем колво частей у произведения, сравниваем его с кол-вом частей которое хранятся в словаре
+                #и если по generating_information_dict_numberOFchapters_published получилось больше изменяем
+                #кол-во частей в словаре
                 '''
                 if Univited_bot.dictionary_numberOFchapters_published[Univited_bot.list_tracking_point[link_composition]] \
                     != Univited_bot.list_tracking_point[link_composition].generating_information_dict_numberOFchapters_published():

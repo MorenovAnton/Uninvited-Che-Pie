@@ -165,4 +165,10 @@ bot = BotHandler(token)
 list_tracking_point = {}
 dictionary_numberOFchapters_published = {}
 dictionary_chat_id_and_tracking_point = defaultdict(list)
+asynchronous_call_tags = ['[\'update_id\']', '[\'message\'][\'text\']', '[\'message\'][\'chat\'][\'id\']', '[\'message\'][\'chat\'][\'first_name\']']
+
+#g = '[\'update_id\']'
+#h = '[\'message\'][\'text\']'
+#f = '[\'message\'][\'chat\'][\'id\']'
+#t = '[\'message\'][\'chat\'][\'first_name\']'
 
