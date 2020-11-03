@@ -26,36 +26,35 @@ def main():
         #и ждем некоторое время до новой проверки полученных сообщений
         '''
         if update_id == last_update_id:
-            update_id = Univited_bot.bot.get_last_update()['update_id']
-            sleep(10)
+            update_id = last_update_id      #заменили Univited_bot.bot.get_last_update()['update_id'] на last_update_id
+            sleep(5)
         else:
             '''
             #Если это не так и разница между update_id и last_update_id есть, т.е если за это время были новые
             #поступления данны/запросы в бот
             '''
             aut = Univited_bot.Author(int(last_chat_text_author_id[2]))
-
-            if last_chat_text_author_id[1] == 'сom':    # получаем список произведений автора
-                try:
-                    Nickname_Authors_Name = aut.Authors_Name()
-                    Authors_Work_id = aut.Work_id()
-                    Univited_bot.bot.send_message(last_chat_id, Nickname_Authors_Name + '\n'  + str(Authors_Work_id))
-                except IndexError:
-                    Univited_bot.bot.send_message(last_chat_id, 'Не удалось получить имя автора, возможно не созданно '
+            try:
+                Nickname_Authors_Name = aut.Authors_Name()
+                Authors_Work_id = aut.Work_id()
+                List_of_Works = aut.List_of_Works()
+            except IndexError:
+                Univited_bot.bot.send_message(last_chat_id, 'Не удалось получить имя автора, возможно не созданно '
                                                                 'ни одного произведения или в работе 0 частей')
 
-            if last_chat_text_author_id[1] == 'inf':            # получаем информацию об произведении
-                comp_on = Univited_bot.Composition(aut.Authors_Name(), aut.List_of_Works(), aut.Work_id(), last_chat_text_author_id[3])
-                Univited_bot.bot.send_message(last_chat_id, comp_on.generating_information_about_a_work())
+            ''' получаем список произведений (Composition) автора '''
+            if last_chat_text_author_id[1] == 'сom':
+                Univited_bot.bot.send_message(last_chat_id, Nickname_Authors_Name + '\n'  + str(Authors_Work_id))
 
-            update_id = Univited_bot.bot.get_last_update()['update_id']
-            sleep(10)
-            '''
-            #Формируем список произведений за которыми будет производиться слежка
-            '''
+            ''' получаем информацию об произведении '''
+            if last_chat_text_author_id[1] == 'inf':
+                composition = Univited_bot.Composition(Nickname_Authors_Name, List_of_Works, Authors_Work_id, last_chat_text_author_id[3])
+                Univited_bot.bot.send_message(last_chat_id, composition.generating_information_about_a_work())
+
+            ''' формируем список произведений за которыми будет производиться слежка '''
             if last_chat_text_author_id[1] == 'trac':
                 # формируем объект проиизведение:
-                composition = Univited_bot.Composition(aut.Authors_Name(), aut.List_of_Works(), aut.Work_id(), last_chat_text_author_id[3])
+                composition = Univited_bot.Composition(Nickname_Authors_Name, List_of_Works, Authors_Work_id, last_chat_text_author_id[3])
                 # Если мы еще не ослеживаем это произведение
                 # Если ссылки на это произведение нет в словере отслеживаемых list_tracking_point произведений
                 if composition.generating_links_to_works() not in Univited_bot.list_tracking_point:
@@ -82,6 +81,8 @@ def main():
                 # должны показать авторов/произведения которые отслеживает человек
                 pass
 
+            update_id = last_update_id
+            sleep(10)
 
         if time.time() - starttime  > 20:
             starttime = time.time()
