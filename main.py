@@ -26,14 +26,18 @@ def main():
         #и ждем некоторое время до новой проверки полученных сообщений
         '''
         if update_id == last_update_id:
-            update_id = last_update_id      #заменили Univited_bot.bot.get_last_update()['update_id'] на last_update_id
-            sleep(5)
+            update_id = last_update_id
+            #sleep(5)
         else:
             '''
             #Если это не так и разница между update_id и last_update_id есть, т.е если за это время были новые
             #поступления данны/запросы в бот
             '''
             aut = Univited_bot.Author(int(last_chat_text_author_id[2]))
+            Nickname_Authors_Name, Authors_Work_id, List_of_Works = '', '', ''
+            
+
+
             try:
                 Nickname_Authors_Name = aut.Authors_Name()
                 Authors_Work_id = aut.Work_id()
@@ -82,9 +86,9 @@ def main():
                 pass
 
             update_id = last_update_id
-            sleep(10)
+            #sleep(10)
 
-        if time.time() - starttime  > 20:
+        if time.time() - starttime  > 120:
             starttime = time.time()
             # Проходим по всем отслеживаемым произведениям:
             for link_composition in Univited_bot.list_tracking_point:
