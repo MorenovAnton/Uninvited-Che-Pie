@@ -36,8 +36,6 @@ def main():
             aut = Univited_bot.Author(int(last_chat_text_author_id[2]))
             Nickname_Authors_Name, Authors_Work_id, List_of_Works = '', '', ''
             
-
-
             try:
                 Nickname_Authors_Name = aut.Authors_Name()
                 Authors_Work_id = aut.Work_id()
