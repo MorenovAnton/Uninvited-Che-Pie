@@ -3,7 +3,7 @@ from lxml import html
 from lxml import etree as et
 import re
 from requests.exceptions import HTTPError
-from token_api_telegram import return_token
+from connection_parameters import return_token
 from collections import defaultdict
 
 class Author:

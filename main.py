@@ -3,9 +3,13 @@ from time import sleep
 import time
 import threading
 import random
-
+from mysql_server_connect import create_connection, execute_read_query, execute_query
+from connection_parameters import mysql_parameters
+import re
 
 def main():
+    connection = create_connection(*mysql_parameters())
+    print("---------------------->", connection, "<----------------------")
     update_id = Univited_bot.bot.get_last_update()['update_id'] # самый  последний update_id
     starttime = time.time()
 
@@ -57,7 +61,20 @@ def main():
             if last_chat_text_author_id[1] == 'trac':
                 # формируем объект проиизведение:
                 composition = Univited_bot.Composition(Nickname_Authors_Name, List_of_Works, Authors_Work_id, last_chat_text_author_id[3])
-                # Если мы еще не ослеживаем это произведение
+                idcomposition = re.findall("\d+", composition.generating_links_to_works()) # # вот как раз этот id произведения будем добавлять в базу в idcomposition_numberpart
+                # Если мы еще не ослеживаем это произведение то у нас нет записи данного id произвежения в idcomposition_numberpart
+                сheck_existence_idcomposition = execute_read_query(connection, "SELECT * from idcomposition_numberpart idc where idc.idcomposition={};".format(*idcomposition))
+                print(сheck_existence_idcomposition)
+                # если ничего не будет то check_existence_idcomposition выведет пустой массив [], в этом случае мы должны  запомннить номммер чата, получить кол-во частей у  данного произведения и записать
+                # все это в базу
+                if not сheck_existence_idcomposition:
+                    # формируем текущее кол-вл частей у произведения
+                    parts = composition.generating_information_dict_numberOFchapters_published()
+                    execute_query(connection, "INSERT INTO idcomposition_numberpart VALUES ({}, {});".format(*idcomposition, parts))
+                    execute_query(connection, "INSERT INTO idcomposition_chatid VALUES ({}, {}, {});".format(*idcomposition, last_chat_id, 1))
+
+
+
                 # Если ссылки на это произведение нет в словере отслеживаемых list_tracking_point произведений
                 if composition.generating_links_to_works() not in Univited_bot.list_tracking_point:
                     # добавлеем в словарь -> list_tracking_point (ссылку на произведение: произведение)
@@ -69,9 +86,9 @@ def main():
                     # dictionary_chat_id_and_tracking_point словарь список chat_id которые следят за книгой
                     Univited_bot.dictionary_chat_id_and_tracking_point[composition.generating_links_to_works()].append(last_chat_id)
 
-                    #print('list_tracking_point', Univited_bot.list_tracking_point)
-                    #print('dictionary_numberOFchapters_published', Univited_bot.dictionary_numberOFchapters_published)
-                    #print('dictionary_chat_id_and_tracking_point', Univited_bot.dictionary_chat_id_and_tracking_point)
+                    print('list_tracking_point', Univited_bot.list_tracking_point)
+                    print('dictionary_numberOFchapters_published', Univited_bot.dictionary_numberOFchapters_published)
+                    print('dictionary_chat_id_and_tracking_point', Univited_bot.dictionary_chat_id_and_tracking_point)
                 else:
                     # Проверка что в dictionary_chat_id_and_tracking_point (по ключу ссылки на произведение) мы не добавим id чата коорый уже
                     # отслеживает это произведение
