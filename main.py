@@ -64,37 +64,24 @@ def main():
                 idcomposition = re.findall("\d+", composition.generating_links_to_works()) # # вот как раз этот id произведения будем добавлять в базу в idcomposition_numberpart
                 # Если мы еще не ослеживаем это произведение то у нас нет записи данного id произвежения в idcomposition_numberpart
                 сheck_existence_idcomposition = execute_read_query(connection, "SELECT * from idcomposition_numberpart idc where idc.idcomposition={};".format(*idcomposition))
-                print(сheck_existence_idcomposition)
-                # если ничего не будет то check_existence_idcomposition выведет пустой массив [], в этом случае мы должны  запомннить номммер чата, получить кол-во частей у  данного произведения и записать
-                # все это в базу
+                print('сheck_existence_idcomposition', сheck_existence_idcomposition)
+                # если ничего не будет то check_existence_idcomposition выведет пустой массив [], в этом случае мы должны, получить кол-во частей у  данного произведения и записать в базу
                 if not сheck_existence_idcomposition:
                     # формируем текущее кол-вл частей у произведения
                     parts = composition.generating_information_dict_numberOFchapters_published()
                     execute_query(connection, "INSERT INTO idcomposition_numberpart VALUES ({}, {});".format(*idcomposition, parts))
+                    # записываем также нового пользователя в idcomposition_chatid
                     execute_query(connection, "INSERT INTO idcomposition_chatid VALUES ({}, {}, {});".format(*idcomposition, last_chat_id, 1))
 
+                 # в этом случае в idcomposition_numberpart присутствует id необходимого произведения и в таблице храниться кол-во частей этого произведения
+                if сheck_existence_idcomposition:
+                    # чаты которые отслеживают это произведение
+                    get_chat_id = execute_read_query(connection, "SELECT ch.chat_id from idcomposition_chatid ch, idcomposition_numberpart idn where \
+                                                                                idn.idcomposition = {} and ch.status = 1;".format(*idcomposition))
+                    # проверяем отслеживвал ли человек это произведение, если id этого чата нету в отслеживааемых добавдяем в idcomposition_chatid
+                    if last_chat_id not in get_chat_id[0]:
+                        execute_query(connection, "INSERT INTO idcomposition_chatid VALUES ({}, {}, {});".format(*idcomposition, last_chat_id, 1))
 
-
-                # Если ссылки на это произведение нет в словере отслеживаемых list_tracking_point произведений
-                if composition.generating_links_to_works() not in Univited_bot.list_tracking_point:
-                    # добавлеем в словарь -> list_tracking_point (ссылку на произведение: произведение)
-                    Univited_bot.list_tracking_point[composition.generating_links_to_works()]  = composition
-                    # формируем текущее кол-вл частей у произведения
-                    parts = composition.generating_information_dict_numberOFchapters_published()
-                    # в словарь dictionary_numberOFchapters_published по произведению добавляем кол-во у него частей
-                    Univited_bot.dictionary_numberOFchapters_published[composition] = parts
-                    # dictionary_chat_id_and_tracking_point словарь список chat_id которые следят за книгой
-                    Univited_bot.dictionary_chat_id_and_tracking_point[composition.generating_links_to_works()].append(last_chat_id)
-
-                    print('list_tracking_point', Univited_bot.list_tracking_point)
-                    print('dictionary_numberOFchapters_published', Univited_bot.dictionary_numberOFchapters_published)
-                    print('dictionary_chat_id_and_tracking_point', Univited_bot.dictionary_chat_id_and_tracking_point)
-                else:
-                    # Проверка что в dictionary_chat_id_and_tracking_point (по ключу ссылки на произведение) мы не добавим id чата коорый уже
-                    # отслеживает это произведение
-                    if last_chat_id not in Univited_bot.dictionary_chat_id_and_tracking_point[composition.generating_links_to_works()]:
-                        Univited_bot.dictionary_chat_id_and_tracking_point[composition.generating_links_to_works()].append(last_chat_id)
-                        #print('dictionary_chat_id_and_tracking_point', Univited_bot.dictionary_chat_id_and_tracking_point)
 
             if last_chat_text_author_id[1] == 'my_author':
                 # должны показать авторов/произведения которые отслеживает человек

@@ -9,3 +9,4 @@ def mysql_parameters():
     mysql_server  = 'us-cdbr-east-02.cleardb.com'
     return mysql_server, user, password, daatabase
 
+
