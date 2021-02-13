@@ -31,7 +31,6 @@ def main():
         '''
         if update_id == last_update_id:
             update_id = last_update_id
-            #sleep(5)
         else:
             '''
             #Если это не так и разница между update_id и last_update_id есть, т.е если за это время были новые
@@ -66,6 +65,7 @@ def main():
                 сheck_existence_idcomposition = execute_read_query(connection, "SELECT * from idcomposition_numberpart idc where idc.idcomposition={};".format(*idcomposition))
                 print('сheck_existence_idcomposition', сheck_existence_idcomposition)
                 # если ничего не будет то check_existence_idcomposition выведет пустой массив [], в этом случае мы должны, получить кол-во частей у  данного произведения и записать в базу
+                # это  значит что записи для этого произведения вообще нету в базе
                 if not сheck_existence_idcomposition:
                     # формируем текущее кол-вл частей у произведения
                     parts = composition.generating_information_dict_numberOFchapters_published()
@@ -73,7 +73,8 @@ def main():
                     # записываем также нового пользователя в idcomposition_chatid
                     execute_query(connection, "INSERT INTO idcomposition_chatid VALUES ({}, {}, {});".format(*idcomposition, last_chat_id, 1))
 
-                 # в этом случае в idcomposition_numberpart присутствует id необходимого произведения и в таблице храниться кол-во частей этого произведения
+                # в этом случае в idcomposition_numberpart присутствует id необходимого произведения и в таблице храниться кол-во частей этого произведения
+                # значит существуют люди которые отслеживают, или отслеживали произведение. Проверяем входит ли в них пользователь и если нет, добавляем его
                 if сheck_existence_idcomposition:
                     # чаты которые отслеживают это произведение
                     get_chat_id = execute_read_query(connection, "SELECT ch.chat_id from idcomposition_chatid ch, idcomposition_numberpart idn where \
@@ -82,17 +83,22 @@ def main():
                     if last_chat_id not in get_chat_id[0]:
                         execute_query(connection, "INSERT INTO idcomposition_chatid VALUES ({}, {}, {});".format(*idcomposition, last_chat_id, 1))
 
+                    # посмотри если этот человек раньше отслеживаал это произведение, в idcomposition_chatid  его статус может быть равен 0
+                    # в этом случае его можно переписывать
 
             if last_chat_text_author_id[1] == 'my_author':
                 # должны показать авторов/произведения которые отслеживает человек
                 pass
 
             update_id = last_update_id
-            #sleep(10)
 
-        if time.time() - starttime  > 120:
+        if time.time() - starttime  > 40:
             starttime = time.time()
             # Проходим по всем отслеживаемым произведениям:
+            idcomp_status_yes = execute_read_query(connection, "SELECT ch.idcomp from idcomposition_chatid ch where ch.status = 1;")
+            # проходим по idcomp_status_yes и формируем ссылки
+
+
             for link_composition in Univited_bot.list_tracking_point:
                 # ссылка на произведение
                 print(link_composition)

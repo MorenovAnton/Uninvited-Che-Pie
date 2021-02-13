@@ -9,4 +9,9 @@ def mysql_parameters():
     mysql_server  = 'us-cdbr-east-02.cleardb.com'
     return mysql_server, user, password, daatabase
 
+#g = [(8957213,89572154,)]
+#print(g[0])
 
+
+#for ii in g[0]:
+#    print(ii)
