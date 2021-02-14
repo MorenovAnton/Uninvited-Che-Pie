@@ -6,6 +6,9 @@ import random
 from mysql_server_connect import create_connection, execute_read_query, execute_query
 from connection_parameters import mysql_parameters
 import re
+import requests
+from lxml import html
+
 
 def main():
     connection = create_connection(*mysql_parameters())
@@ -92,35 +95,50 @@ def main():
 
             update_id = last_update_id
 
-        if time.time() - starttime  > 40:
+
+        # здесь composition уже использовать нельзя
+        if time.time() - starttime  > 10: # 40
             starttime = time.time()
             # Проходим по всем отслеживаемым произведениям:
             idcomp_status_yes = execute_read_query(connection, "SELECT ch.idcomp from idcomposition_chatid ch where ch.status = 1;")
-            # проходим по idcomp_status_yes и формируем ссылки
-
-
-            for link_composition in Univited_bot.list_tracking_point:
+            # проходим по idcomp_status_yes и формируем ссылки на произведения, если существующее кол-во частей отличаются с существующим в базе, шлем оповещение
+            for id_link_composition in idcomp_status_yes[0]:
                 # ссылка на произведение
-                print(link_composition)
+                link_composition = 'https://ficbook.net/readfic/{}#part_content'.format(id_link_composition)
                 # кол-во частей у произведения
-                #print('*--->', Univited_bot.dictionary_numberOFchapters_published[Univited_bot.list_tracking_point[link_composition]])
-                #print('*--->', Univited_bot.list_tracking_point[link_composition].generating_information_dict_numberOFchapters_published())
-                ''''
-                #Генерируем колво частей у произведения, сравниваем его с кол-вом частей которое хранятся в словаре
-                #и если по generating_information_dict_numberOFchapters_published получилось больше изменяем
-                #кол-во частей в словаре
+                response = requests.get(link_composition)
+                parsed_body = html.fromstring(response.text)
+                els_mb5 = parsed_body.find_class('mb-5')
+                len_els_mb5 = len(els_mb5)
+                information_work = [re.sub("\s\s+", " ", str(els_mb5[t].text_content())) for t in range(len_els_mb5)]
+                for inf_w in information_work:
+                    # Cтраницы и кол-во частей
+                    if re.findall("Размер.+", inf_w):
+                        parts = re.findall("\d+", inf_w)[1]   # кол-во частей при опросе
+
+                # получаем кол-во частей произведения хранящийся в базе
+                numberpart_in_idcomposition_numberpart = execute_read_query(connection, "SELECT idc.numberpart from idcomposition_numberpart idc where idc.idcomposition={};".format(id_link_composition))
+                numberpart_in_idcomposition_numberpart =   int(*numberpart_in_idcomposition_numberpart[0])
+
                 '''
-                if Univited_bot.dictionary_numberOFchapters_published[Univited_bot.list_tracking_point[link_composition]] \
-                    != Univited_bot.list_tracking_point[link_composition].generating_information_dict_numberOFchapters_published():
+                Если кол-во частей при опросе отсличаются от данных в базе, получаем id всех чатов из базы которые отслеживвают данное произведение, 
+                а так же меняем в базе значение numberpart в idcomposition_numberpart и шлем оповещение по id этих чатов
+                '''
+                # /inf/4751346/testB
+                if  parts != numberpart_in_idcomposition_numberpart:
+                    get_chat_idin_idcomposition_chatid = execute_read_query(connection, "SELECT ch.chat_id from idcomposition_chatid ch where ch.idcomp={};".format(id_link_composition))
+
+                print('get_chat_idin_idcomposition_chatid', get_chat_idin_idcomposition_chatid)
+
+
 
                     # Проходим по всем chat id в которые нужно послать оповещение
-                    for chat_ID in Univited_bot.dictionary_chat_id_and_tracking_point[link_composition]:
-                        Univited_bot.bot.send_message(chat_ID, "В произведении {}, изменилось кол-во глав".format(link_composition))
+                    #for chat_ID in Univited_bot.dictionary_chat_id_and_tracking_point[link_composition]:
+                        #Univited_bot.bot.send_message(chat_ID, "В произведении {}, изменилось кол-во глав".format(link_composition))
 
                     # изменяем кол-во частей в словаре
-                    Univited_bot.dictionary_numberOFchapters_published[Univited_bot.list_tracking_point[link_composition]] \
-                    = Univited_bot.list_tracking_point[link_composition].generating_information_dict_numberOFchapters_published()
-
+                    #Univited_bot.dictionary_numberOFchapters_published[Univited_bot.list_tracking_point[link_composition]] \
+                    #= Univited_bot.list_tracking_point[link_composition].generating_information_dict_numberOFchapters_published()
 
 
 if __name__ == '__main__':
